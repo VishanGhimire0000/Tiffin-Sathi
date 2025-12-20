@@ -5,8 +5,8 @@
 ---
 
 ## Features
-- **Cooks:** Register, add/edit/delete tiffins, view orders  
-- **Customers:** Browse/filter tiffins, place orders, rate/review  
+- **Cooks:** Register, add/delete tiffins, view orders  
+- **Customers:** Browse tiffins, place orders, rate/review  
 - Simple, responsive design with images  
 
 ---
@@ -23,7 +23,6 @@
 - `tiffins` – meal listings  
 - `orders` – order info  
 - `reviews` – optional ratings/comments  
-- `categories` – meal types  
 
 ---
 
