@@ -1,7 +1,6 @@
 <?php 
 include 'db.php'; 
 
-// Logic to handle the form submission
 if (isset($_POST['register'])) {
     $name = mysqli_real_escape_string($conn, $_POST['name']);
     $email = mysqli_real_escape_string($conn, $_POST['email']);
@@ -9,127 +8,135 @@ if (isset($_POST['register'])) {
     $password = mysqli_real_escape_string($conn, $_POST['password']);
     $role = $_POST['role'];
 
-    // Check if email already exists
     $check = mysqli_query($conn, "SELECT * FROM users WHERE email='$email'");
     if (mysqli_num_rows($check) > 0) {
         echo "<script>alert('Email already registered!');</script>";
     } else {
-        $sql = "INSERT INTO users (name, email, phone, password, role) 
-                VALUES ('$name', '$email', '$phone', '$password', '$role')";
-        
+        $sql = "INSERT INTO users (name, email, phone, password, role) VALUES ('$name', '$email', '$phone', '$password', '$role')";
         if (mysqli_query($conn, $sql)) {
             echo "<script>alert('Registration Successful! Please Login.'); window.location.href='login.php';</script>";
-        } else {
-            echo "Error: " . mysqli_error($conn);
         }
     }
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Join TiffinSathi</title>
+    <title>Register - TiffinSathi</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+        /* Role Selection Styling */
+        .role-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
         }
-        .auth-wrapper {
-            flex: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
+
+        .role-card {
+            position: relative;
+            cursor: pointer;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: 0.3s;
+            text-align: center;
+            background: #f9f9f9;
         }
-        .register-card {
-            background: white;
+
+        .role-card img {
             width: 100%;
-            max-width: 480px;
-            padding: 40px;
-            border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            height: 100px;
+            object-fit: cover;
+            display: block;
+            filter: grayscale(40%);
         }
-        .register-card h2 { color: var(--primary); text-align: center; margin-bottom: 5px; }
-        .subtitle { text-align: center; color: #777; margin-bottom: 25px; font-size: 0.9rem; }
-        
-        .input-group { margin-bottom: 15px; }
-        .input-group label { display: block; font-size: 0.85rem; margin-bottom: 5px; font-weight: 600; color: #444; }
-        
-        /* The Card-Style Role Selector */
-        .role-selection { display: flex; gap: 15px; margin: 15px 0 25px 0; }
-        .role-option { flex: 1; position: relative; }
-        .role-option input { position: absolute; opacity: 0; cursor: pointer; }
-        .role-label {
-            display: block; padding: 12px; border: 2px solid #eee; border-radius: 12px;
-            text-align: center; cursor: pointer; transition: 0.3s; font-weight: 600; font-size: 0.9rem;
+
+        .role-card label {
+            display: block;
+            padding: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            color: #444;
         }
-        .role-option input:checked + .role-label {
-            border-color: var(--primary); background: #fff5f6; color: var(--primary);
+
+        /* Hide the actual radio button */
+        .role-card input[type="radio"] {
+            display: none;
+        }
+
+        /* Highlight card when selected */
+        .role-card input[type="radio"]:checked + .role-content {
+            border: 2px solid var(--primary);
+            background: #fff5f5;
         }
         
-        .footer-text { text-align: center; margin-top: 20px; font-size: 0.9rem; }
-        .footer-text a { color: var(--primary); text-decoration: none; font-weight: bold; }
+        .role-card input[type="radio"]:checked + .role-content img {
+            filter: grayscale(0%);
+        }
+
+        .role-card input[type="radio"]:checked + .role-content label {
+            color: var(--primary);
+        }
+
+        .role-content {
+            border: 2px solid #eee;
+            border-radius: 12px;
+            overflow: hidden;
+        }
     </style>
 </head>
 <body>
+    <?php include 'navbar.php'; ?>
 
-    <nav>
-        <div class="logo"><h2>TiffinSathi</h2></div>
-        <div><a href="index.php">Home</a></div>
-    </nav>
+    <div class="container" style="display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 40px 20px;">
+        <div class="card" style="width: 100%; max-width: 500px; padding: 40px;">
+            <h2 style="text-align: center; color: var(--primary); margin-bottom: 5px;">Create Account</h2>
+            <p style="text-align: center; color: #666; margin-bottom: 25px;">How would you like to use TiffinSathi?</p>
 
-    <div class="auth-wrapper">
-        <div class="register-card">
-            <h2>Create Account</h2>
-            <p class="subtitle">Delicious home-cooked meals are one step away.</p>
-
-            <form method="POST" action="register.php">
-                <div class="input-group">
-                    <label>Full Name</label>
-                    <input type="text" name="name" placeholder="E.g. Rajesh Hamal" required>
-                </div>
-
-                <div class="input-group">
-                    <label>Email Address</label>
-                    <input type="email" name="email" placeholder="example@mail.com" required>
-                </div>
-
-                <div class="input-group">
-                    <label>Phone Number</label>
-                    <input type="tel" name="phone" placeholder="98XXXXXXXX" pattern="[0-9]{10}" maxlength="10" required>
-                </div>
-
-                <div class="input-group">
-                    <label>Password</label>
-                    <input type="password" name="password" placeholder="Create a strong password" required>
-                </div>
-
-                <label style="font-size: 0.85rem; font-weight: 600; color: #444;">Join TiffinSathi as a:</label>
-                <div class="role-selection">
-                    <div class="role-option">
-                        <input type="radio" name="role" value="customer" id="cust" checked>
-                        <label for="cust" class="role-label">😋 Customer</label>
+            <form method="POST">
+                <div class="role-container">
+                    <div class="role-card">
+                        <input type="radio" name="role" value="customer" id="buy_food" checked>
+                        <label for="buy_food" class="role-content">
+                            <img src="https://images.unsplash.com/photo-1543353071-873f17a7a088?auto=format&fit=crop&w=500&q=80" alt="Eat">
+                            <label>Buy Food</label>
+                        </label>
                     </div>
-                    <div class="role-option">
-                        <input type="radio" name="role" value="cook" id="cook">
-                        <label for="cook" class="role-label">👨‍🍳 Cook</label>
+
+                    <div class="role-card">
+                        <input type="radio" name="role" value="cook" id="cook_food">
+                        <label for="cook_food" class="role-content">
+                            <img src="https://images.unsplash.com/photo-1556910103-1c02745aae4d?auto=format&fit=crop&w=500&q=80" alt="Cook">
+                            <label>Cook Food</label>
+                        </label>
                     </div>
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display:block; margin-bottom:5px;">Full Name</label>
+                    <input type="text" name="name" placeholder="John Doe" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display:block; margin-bottom:5px;">Email Address</label>
+                    <input type="email" name="email" placeholder="john@example.com" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <label style="display:block; margin-bottom:5px;">Phone Number</label>
+                    <input type="text" name="phone" placeholder="98XXXXXXXX" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                </div>
+                <div style="margin-bottom: 25px;">
+                    <label style="display:block; margin-bottom:5px;">Password</label>
+                    <input type="password" name="password" placeholder="••••••••" required style="width:100%; padding:10px; border:1px solid #ddd; border-radius:8px;">
                 </div>
 
                 <button type="submit" name="register" class="btn" style="width: 100%;">Sign Up</button>
             </form>
 
-            <div class="footer-text">
-                Already have an account? <a href="login.php">Login here</a>
-            </div>
+            <p style="text-align: center; margin-top: 20px; font-size: 0.9rem;">
+                Already have an account? <a href="login.php" style="color: var(--primary); text-decoration: none; font-weight: bold;">Login here</a>
+            </p>
         </div>
     </div>
-
 </body>
 </html>

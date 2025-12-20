@@ -1,28 +1,28 @@
-<?php 
+<?php
 include 'db.php';
 
-// Security: Only cooks can access this page
-if(!isset($_SESSION['role']) || $_SESSION['role'] != 'cook') {
-    header("Location: index.php");
+// Access control: Only logged-in cooks can see this page
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'cook') {
+    header("Location: login.php");
     exit();
 }
 
-if(isset($_POST['add'])) {
+if (isset($_POST['publish'])) {
     $title = mysqli_real_escape_string($conn, $_POST['title']);
     $price = mysqli_real_escape_string($conn, $_POST['price']);
     $area = mysqli_real_escape_string($conn, $_POST['area']);
-    
-    // Handle Image Upload
-    $img = time() . '_' . $_FILES['image']['name']; // Added timestamp to prevent duplicate names
-    $target = "uploads/" . $img;
-    
-    if(move_uploaded_file($_FILES['image']['tmp_name'], $target)) {
-        $uid = $_SESSION['user_id'];
-        $query = "INSERT INTO tiffins (cook_id, title, price, area, image) VALUES ('$uid', '$title', '$price', '$area', '$img')";
-        mysqli_query($conn, $query);
-        header("Location: dashboard.php?success=listing_added");
-    } else {
-        echo "<script>alert('Failed to upload image. Check if uploads folder exists.');</script>";
+    $cook_id = $_SESSION['user_id'];
+
+    // Secure image upload
+    $image_name = time() . '_' . basename($_FILES['image']['name']);
+    $target = "uploads/" . $image_name;
+
+    if (move_uploaded_file($_FILES['image']['tmp_name'], $target)) {
+        $sql = "INSERT INTO tiffins (cook_id, title, price, area, image) VALUES ('$cook_id', '$title', '$price', '$area', '$image_name')";
+        if (mysqli_query($conn, $sql)) {
+            header("Location: dashboard.php?success=1");
+            exit();
+        }
     }
 }
 ?>
@@ -30,126 +30,105 @@ if(isset($_POST['add'])) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Post New Listing - TiffinSathi</title>
+    <title>Post New Tiffin - TiffinSathi</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            min-height: 100vh;
-        }
-
-        .listing-wrapper {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            padding: 40px 20px;
-        }
-
-        .listing-card {
-            background: white;
-            width: 100%;
+        body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .form-card {
             max-width: 600px;
+            margin: 60px auto;
+            background: white;
             padding: 40px;
-            border-radius: 20px;
+            border-radius: 15px;
             box-shadow: 0 15px 35px rgba(0,0,0,0.1);
         }
-
-        .listing-card h2 {
-            color: var(--primary);
-            margin-bottom: 10px;
-            font-size: 1.8rem;
+        .form-card h1 { color: #e63946; text-align: center; margin-bottom: 10px; font-size: 2rem; }
+        .form-card p { text-align: center; color: #666; margin-bottom: 30px; }
+        
+        .input-group { margin-bottom: 20px; }
+        .input-group label { display: block; font-weight: bold; margin-bottom: 8px; color: #333; }
+        .input-field {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 1rem;
         }
+        .input-field:focus { border-color: #e63946; outline: none; box-shadow: 0 0 5px rgba(230, 57, 70, 0.2); }
+        
+        .flex-row { display: flex; gap: 20px; }
+        .flex-row .input-group { flex: 1; }
 
-        .subtitle {
-            color: #666;
-            margin-bottom: 30px;
-            font-size: 0.95rem;
-        }
-
-        .input-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        .input-group {
-            margin-bottom: 20px;
-        }
-
-        .input-group label {
-            display: block;
-            font-weight: 600;
-            margin-bottom: 8px;
-            color: #444;
-            font-size: 0.9rem;
-        }
-
-        /* Styling the file input */
-        input[type="file"] {
-            padding: 10px;
-            background: #f8f9fa;
-            border: 2px dashed #ddd;
+        .upload-area {
+            border: 2px dashed #ccc;
+            padding: 30px;
+            text-align: center;
+            border-radius: 8px;
+            background: #fafafa;
             cursor: pointer;
+            transition: 0.3s;
         }
-
-        input[type="file"]:hover {
-            border-color: var(--primary);
+        .upload-area:hover { border-color: #e63946; background: #fff5f5; }
+        
+        .btn-submit {
+            width: 100%;
+            padding: 15px;
+            background: #e63946;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
         }
-
-        .form-footer {
-            margin-top: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
+        .btn-submit:hover { background: #d62828; transform: translateY(-2px); }
+        .cancel-btn { display: block; text-align: center; margin-top: 15px; color: #888; text-decoration: none; }
     </style>
 </head>
 <body>
+    <?php include 'navbar.php'; ?>
 
-    <nav>
-        <div class="logo"><h2>TiffinSathi</h2></div>
-        <div>
-            <a href="dashboard.php">Back to Dashboard</a>
-        </div>
-    </nav>
+    <div class="form-card">
+        <h1>Post a New Tiffin</h1>
+        <p>Enter the details of your home-cooked meal.</p>
 
-    <div class="listing-wrapper">
-        <div class="listing-card">
-            <h2>Post a New Tiffin</h2>
-            <p class="subtitle">Fill in the details to share your delicious home-cooked meal with your community.</p>
+        <form action="add_tiffin.php" method="POST" enctype="multipart/form-data">
+            <div class="input-group">
+                <label>Meal Title</label>
+                <input type="text" name="title" class="input-field" placeholder="e.g., Authentic Nepali Thali" required>
+            </div>
 
-            <form method="POST" enctype="multipart/form-data">
+            <div class="flex-row">
                 <div class="input-group">
-                    <label>Meal Title</label>
-                    <input type="text" name="title" placeholder="e.g., Authentic Nepali Thakali Set" required>
+                    <label>Price (NPR)</label>
+                    <input type="number" name="price" class="input-field" placeholder="e.g., 250" required>
                 </div>
-
-                <div class="input-row">
-                    <div class="input-group">
-                        <label>Price (NPR)</label>
-                        <input type="number" name="price" placeholder="e.g., 250" required>
-                    </div>
-                    <div class="input-group">
-                        <label>Pickup Area</label>
-                        <input type="text" name="area" placeholder="e.g., Patan, Lalitpur" required>
-                    </div>
-                </div>
-
                 <div class="input-group">
-                    <label>Food Image</label>
-                    <input type="file" name="image" accept="image/*" required>
-                    <small style="color: #888;">Clear photos of the meal get more orders!</small>
+                    <label>Pickup Area</label>
+                    <input type="text" name="area" class="input-field" placeholder="e.g., Patan" required>
                 </div>
+            </div>
 
-                <div class="form-footer">
-                    <a href="dashboard.php" style="text-decoration: none; color: #666; font-size: 0.9rem;">Cancel</a>
-                    <button type="submit" name="add" class="btn" style="padding: 12px 40px;">Publish Listing</button>
+            <div class="input-group">
+                <label>Food Image</label>
+                <div class="upload-area" onclick="document.getElementById('file-input').click()">
+                    <span id="file-name">Click to select meal image</span>
+                    <input type="file" name="image" id="file-input" style="display:none;" required onchange="showName(this)">
                 </div>
-            </form>
-        </div>
+            </div>
+
+            <button type="submit" name="publish" class="btn-submit">Publish Listing</button>
+            <a href="dashboard.php" class="cancel-btn">Cancel and return</a>
+        </form>
     </div>
 
+    <script>
+        function showName(input) {
+            const fileName = input.files[0].name;
+            document.getElementById('file-name').innerText = "Selected: " + fileName;
+        }
+    </script>
 </body>
 </html>

@@ -1,5 +1,4 @@
 <?php include 'db.php'; ?>
-<?php include 'navbar.php'; ?>
 <!DOCTYPE html>
 <html>
 <head>
@@ -7,14 +6,17 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <?php include 'navbar.php'; ?>
 
+    <section class="hero" style="background-image: url('https://images.unsplash.com/photo-1547592166-23ac45744acd?auto=format&fit=crop&w=1500&q=80');">
+        <div class="hero-overlay"></div>
+        <div class="hero-content">
+            <h1>Fresh Home Food in Nepal</h1>
+            <p>Connect directly with local home cooks near you for authentic meals.</p>
+        </div>
+    </section>
 
     <div class="container">
-        <header style="text-align:center; margin-bottom: 3rem;">
-            <h1>Fresh Home Food in Nepal</h1>
-            <p>Connect directly with local home cooks near you.</p>
-        </header>
-
         <div class="grid">
             <?php
             $res = mysqli_query($conn, "SELECT * FROM tiffins");
@@ -26,7 +28,7 @@
                         <h3>{$row['title']}</h3>
                         <p style='color: #666;'>📍 {$row['area']}</p>
                         <h4 style='color: var(--primary)'>Rs. {$row['price']}</h4>
-                        <a href='order.php?id={$row['id']}' class='btn'>Order Now</a>
+                        <a href='order.php?id={$row['id']}' class='btn' style='margin-top:10px; width:100%'>Order Now</a>
                     </div>
                 </div>";
             }

@@ -1,85 +1,113 @@
 <?php
 include 'db.php';
+// Ensure session is started to access user role and ID
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
-// 1. Security Check
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
+// 1. Access Control: Block cooks and guests from ordering
+if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'customer') {
+    echo "<script>alert('Please login as a customer to place an order.'); window.location='login.php';</script>";
     exit();
 }
 
-// 2. Role Check
-if ($_SESSION['role'] !== 'customer') {
-    echo "<script>alert('Only customers can place orders!'); window.location.href='index.php';</script>";
+// Check if a tiffin ID is provided
+if (!isset($_GET['id'])) {
+    header("Location: explore.php");
     exit();
 }
 
-// 3. Process and Display Receipt
-if (isset($_GET['id'])) {
-    $tiffin_id = mysqli_real_escape_string($conn, $_GET['id']);
-    $customer_id = $_SESSION['user_id'];
+$t_id = intval($_GET['id']);
 
-    // Fetch tiffin and cook details
-    $tiffin_res = mysqli_query($conn, "SELECT * FROM tiffins WHERE id = '$tiffin_id'");
-    $tiffin_data = mysqli_fetch_assoc($tiffin_res);
+// Fetch Tiffin Details and Cook Name
+$query = "SELECT t.*, u.name as cook_name FROM tiffins t 
+          JOIN users u ON t.cook_id = u.id 
+          WHERE t.id = $t_id";
+$res = mysqli_query($conn, $query);
+$tiffin = mysqli_fetch_assoc($res);
+
+if (!$tiffin) {
+    echo "Meal not found.";
+    exit();
+}
+
+// 2. Fix Logic: Process order only when button is clicked
+if (isset($_POST['confirm_order'])) {
+    $u_id = $_SESSION['user_id'];
+    $cook_id = $tiffin['cook_id'];
+
+    // Insert data into orders table
+    $insert = "INSERT INTO orders (customer_id, tiffin_id, cook_id, status) 
+               VALUES ($u_id, $t_id, $cook_id, 'Pending')";
     
-    if ($tiffin_data) {
-        $cook_id = $tiffin_data['cook_id'];
-        $title = $tiffin_data['title'];
-        $price = $tiffin_data['price'];
-        $area = $tiffin_data['area'];
-
-        // Insert into orders table
-        $sql = "INSERT INTO orders (customer_id, tiffin_id, cook_id, status) 
-                VALUES ('$customer_id', '$tiffin_id', '$cook_id', 'Pending')";
-
-        if (mysqli_query($conn, $sql)) {
-            $order_id = mysqli_insert_id($conn); // Get the ID of the new order
-            ?>
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Order Success - TiffinSathi</title>
-                <link rel="stylesheet" href="style.css">
-                <style>
-                    .receipt-card {
-                        background: white; padding: 30px; border-radius: 15px;
-                        max-width: 500px; margin: 50px auto; text-align: center;
-                        box-shadow: 0 10px 30px rgba(0,0,0,0.1); border-top: 5px solid var(--primary);
-                    }
-                    .check-mark { font-size: 50px; color: #2ecc71; margin-bottom: 10px; }
-                    .receipt-details { text-align: left; margin: 20px 0; padding: 15px; background: #f9f9f9; border-radius: 10px; }
-                    .detail-row { display: flex; justify-content: space-between; margin-bottom: 10px; border-bottom: 1px dashed #ddd; padding-bottom: 5px; }
-                </style>
-            </head>
-            <body>
-                <div class="receipt-card">
-                    <div class="check-mark">✔</div>
-                    <h2>Order Successfully Placed!</h2>
-                    <p>Your order has been sent to the cook.</p>
-
-                    <div class="receipt-details">
-                        <div class="detail-row"><strong>Order ID:</strong> <span>#<?php echo $order_id; ?></span></div>
-                        <div class="detail-row"><strong>Item:</strong> <span><?php echo $title; ?></span></div>
-                        <div class="detail-row"><strong>Area:</strong> <span><?php echo $area; ?></span></div>
-                        <div class="detail-row"><strong>Total Price:</strong> <span style="color:var(--primary); font-weight:bold;">Rs. <?php echo $price; ?></span></div>
-                        <div class="detail-row"><strong>Status:</strong> <span>Pending Confirmation</span></div>
-                    </div>
-
-                    <a href="dashboard.php" class="btn">View My Orders</a>
-                    <br><br>
-                    <a href="index.php" style="text-decoration:none; color:#666;">Back to Home</a>
-                </div>
-            </body>
-            </html>
-            <?php
-            exit(); // Stop further execution so the receipt stays on screen
-        } else {
-            echo "Error: " . mysqli_error($conn);
-        }
-    } else {
-        echo "Tiffin not found.";
+    if (mysqli_query($conn, $insert)) {
+        // GET THE NEW ORDER ID to pass to confirmation page
+        $new_order_id = mysqli_insert_id($conn); 
+        
+        // REDIRECT TO THE NEW CONFIRMATION PAGE
+        header("Location: confirmation.php?order_id=" . $new_order_id);
+        exit();
     }
-} else {
-    header("Location: index.php");
 }
 ?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title><?php echo htmlspecialchars($tiffin['title']); ?> - TiffinSathi</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body style="background-color: #f8f9fa;">
+    <?php include 'navbar.php'; ?>
+
+    <div class="container" style="max-width: 900px; margin: 50px auto;">
+        <div style="background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); display: flex; gap: 40px; align-items: center;">
+            <div style="flex: 1;">
+                <img src="uploads/<?php echo $tiffin['image']; ?>" style="width: 100%; border-radius: 15px; object-fit: cover; height: 300px;">
+            </div>
+            
+            <div style="flex: 1;">
+                <a href="cook_profile.php?id=<?php echo $tiffin['cook_id']; ?>" style="color: #e63946; text-decoration: none; font-size: 0.9rem; font-weight: 600;">View Cook Profile</a>
+                <h1 style="margin: 10px 0; font-size: 2.5rem; color: #333;"><?php echo htmlspecialchars($tiffin['title']); ?></h1>
+                <p style="color: #666; font-size: 1.1rem; margin-bottom: 20px;">📍 <?php echo htmlspecialchars($tiffin['area']); ?></p>
+                
+                <h2 style="color: #e63946; font-size: 2rem; margin-bottom: 30px;">Rs. <?php echo number_format($tiffin['price'], 2); ?></h2>
+                
+                <form method="POST" action="order.php?id=<?php echo $t_id; ?>">
+                    <button type="submit" name="confirm_order" style="width: 100%; padding: 15px; background: #e63946; color: white; border: none; border-radius: 10px; font-size: 1.2rem; font-weight: bold; cursor: pointer; transition: 0.3s;">
+                        Confirm Order
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div style="margin-top: 40px; background: white; padding: 40px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.05);">
+            <h3 style="margin-bottom: 30px; font-size: 1.5rem; color: #333; border-bottom: 2px solid #f4f4f4; padding-bottom: 15px;">What others are saying</h3>
+            
+            <?php
+            // Join reviews with users and orders because reviews table lacks tiffin_id
+            $rev_query = "SELECT r.*, u.name FROM reviews r 
+                          JOIN users u ON r.customer_id = u.id 
+                          JOIN orders o ON r.order_id = o.id 
+                          WHERE o.tiffin_id = $t_id 
+                          ORDER BY r.id DESC";
+            $revs = mysqli_query($conn, $rev_query);
+
+            if (mysqli_num_rows($revs) > 0):
+                while ($r = mysqli_fetch_assoc($revs)): ?>
+                    <div style="border-bottom: 1px solid #f4f4f4; padding-bottom: 20px; margin-bottom: 20px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <strong><?php echo htmlspecialchars($r['name']); ?></strong>
+                            <span style="color: #f1c40f;"><?php echo str_repeat('⭐', $r['rating']); ?></span>
+                        </div>
+                        <p style="margin-top: 10px; color: #555; line-height: 1.6;"><?php echo htmlspecialchars($r['comment']); ?></p>
+                        <small style="color: #999;"><?php echo date('M d, Y', strtotime($r['created_at'])); ?></small>
+                    </div>
+                <?php endwhile;
+            else: ?>
+                <p style="color: #999; text-align: center; padding: 20px;">No reviews yet for this meal.</p>
+            <?php endif; ?>
+        </div>
+    </div>
+</body>
+</html>
